@@ -1,0 +1,112 @@
+[1mdiff --git a/app/admin/showtimes/page.jsx b/app/admin/showtimes/page.jsx[m
+[1mindex de08eeb..82fd093 100644[m
+[1m--- a/app/admin/showtimes/page.jsx[m
+[1m+++ b/app/admin/showtimes/page.jsx[m
+[36m@@ -16,6 +16,7 @@[m [mexport default function AdminShowtimesPage() {[m
+   const [loading, setLoading] = useState(true);[m
+   const [filters, setFilters] = useState({ movie_id: "", branch_id: "", date: new Date().toISOString().split("T")[0] });[m
+   const [showModal, setShowModal] = useState(false);[m
+[32m+[m[32m  const [editingShowtime, setEditingShowtime] = useState(null);[m
+   const [formData, setFormData] = useState({[m
+     movie_id: "", screen_id: "", start_time: "", base_price: 65000, language: "Tiếng Việt", subtitle: ""[m
+   });[m
+[36m@@ -69,25 +70,48 @@[m [mexport default function AdminShowtimesPage() {[m
+   }[m
+ [m
+   function openCreateModal() {[m
+[32m+[m[32m    setEditingShowtime(null);[m
+     setFormData({ movie_id: "", screen_id: "", start_time: "", base_price: 65000, language: "Tiếng Việt", subtitle: "" });[m
+     setShowModal(true);[m
+   }[m
+ [m
+[32m+[m[32m  function openEditModal(showtime) {[m
+[32m+[m[32m    setEditingShowtime(showtime);[m
+[32m+[m[32m    const startTime = new Date(showtime.start_time);[m
+[32m+[m[32m    const localDateTime = new Date(startTime.getTime() - startTime.getTimezoneOffset() * 60000).toISOString().slice(0, 16);[m
+[32m+[m[32m    setFormData({[m
+[32m+[m[32m      movie_id: showtime.movie_id.toString(),[m
+[32m+[m[32m      screen_id: showtime.screen_id.toString(),[m
+[32m+[m[32m      start_time: localDateTime,[m
+[32m+[m[32m      base_price: showtime.base_price,[m
+[32m+[m[32m      language: showtime.language || "Tiếng Việt",[m
+[32m+[m[32m      subtitle: showtime.subtitle || ""[m
+[32m+[m[32m    });[m
+[32m+[m[32m    fetchScreens(showtime.branch_id.toString());[m
+[32m+[m[32m    setShowModal(true);[m
+[32m+[m[32m  }[m
+[32m+[m
+   async function handleSubmit(e) {[m
+     e.preventDefault();[m
+     setSaving(true);[m
+     setMessage({ type: "", text: "" });[m
+ [m
+     try {[m
+[31m-      const res = await fetch("/api/admin/showtimes", {[m
+[31m-        method: "POST",[m
+[32m+[m[32m      const url = editingShowtime ? `/api/admin/showtimes/${editingShowtime.id}` : "/api/admin/showtimes";[m
+[32m+[m[32m      const method = editingShowtime ? "PATCH" : "POST";[m
+[32m+[m[41m      [m
+[32m+[m[32m      const res = await fetch(url, {[m
+[32m+[m[32m        method,[m
+         headers: { "Content-Type": "application/json" },[m
+         body: JSON.stringify(formData)[m
+       });[m
+       if (!res.ok) throw new Error((await res.json()).error);[m
+[31m-      setMessage({ type: "success", text: "Tạo suất chiếu thành công!" });[m
+[32m+[m[32m      setMessage({ type: "success", text: editingShowtime ? "Cập nhật suất chiếu thành công!" : "Tạo suất chiếu thành công!" });[m
+       fetchShowtimes();[m
+[31m-      setTimeout(() => setShowModal(false), 1000);[m
+[32m+[m[32m      setTimeout(() => {[m
+[32m+[m[32m        setShowModal(false);[m
+[32m+[m[32m        setEditingShowtime(null);[m
+[32m+[m[32m      }, 1000);[m
+     } catch (err) {[m
+       setMessage({ type: "error", text: err.message });[m
+     } finally {[m
+[36m@@ -243,6 +267,13 @@[m [mexport default function AdminShowtimesPage() {[m
+                       </td>[m
+                       <td>[m
+                         <div className="admin-actions">[m
+[32m+[m[32m                          <button[m
+[32m+[m[32m                            className="admin-action-btn"[m
+[32m+[m[32m                            onClick={() => openEditModal(showtime)}[m
+[32m+[m[32m                            title="Sửa"[m
+[32m+[m[32m                          >[m
+[32m+[m[32m                            ✏️[m
+[32m+[m[32m                          </button>[m
+                           <button[m
+                             className="admin-action-btn admin-action-btn--danger"[m
+                             onClick={() => handleDelete(showtime)}[m
+[36m@@ -263,11 +294,11 @@[m [mexport default function AdminShowtimesPage() {[m
+ [m
+         {/* Create Modal */}[m
+         {showModal && ([m
+[31m-          <div className="admin-modal-overlay" onClick={() => setShowModal(false)}>[m
+[32m+[m[32m          <div className="admin-modal-overlay" onClick={() => { setShowModal(false); setEditingShowtime(null); }}>[m
+             <div className="admin-modal" onClick={e => e.stopPropagation()} style={{maxWidth: 500}}>[m
+               <div className="admin-modal__header">[m
+[31m-                <h2>Thêm suất chiếu mới</h2>[m
+[31m-                <button className="admin-modal__close" onClick={() => setShowModal(false)}>×</button>[m
+[32m+[m[32m                <h2>{editingShowtime ? "Sửa suất chiếu" : "Thêm suất chiếu mới"}</h2>[m
+[32m+[m[32m                <button className="admin-modal__close" onClick={() => { setShowModal(false); setEditingShowtime(null); }}>×</button>[m
+               </div>[m
+               [m
+               <form onSubmit={handleSubmit} className="admin-modal__body">[m
+[36m@@ -323,9 +354,9 @@[m [mexport default function AdminShowtimesPage() {[m
+                 </div>[m
+ [m
+                 <div className="admin-modal__footer">[m
+[31m-                  <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Hủy</button>[m
+[32m+[m[32m                  <button type="button" className="btn btn-secondary" onClick={() => { setShowModal(false); setEditingShowtime(null); }}>Hủy</button>[m
+                   <button type="submit" className="btn btn-primary" disabled={saving}>[m
+[31m-                    {saving ? "Đang lưu..." : "Tạo suất chiếu"}[m
+[32m+[m[32m                    {saving ? "Đang lưu..." : (editingShowtime ? "Cập nhật" : "Tạo suất chiếu")}[m
+                   </button>[m
+                 </div>[m
+               </form>[m
+[36m@@ -335,3 +366,5 @@[m [mexport default function AdminShowtimesPage() {[m
+       </div>[m
+   );[m
+ }[m
+[41m+[m
+[41m+[m
