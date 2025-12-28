@@ -246,34 +246,3 @@ export default async function MoviePage() {
     </div>
   );
 }
-
-
-
-
-import Link from "next/link";
-import MoviePoster from "@/components/MoviePoster";
-import { prisma } from "@/lib/prisma";
-
-async function getMovies() {
-  const [nowShowing, comingSoon] = await Promise.all([
-    prisma.movies.findMany({
-      where: { status: "now_showing" },
-      orderBy: [{ is_featured: "desc" }, { release_date: "desc" }],
-    }),
-    prisma.movies.findMany({
-      where: { status: "coming_soon" },
-      orderBy: [{ is_featured: "desc" }, { release_date: "asc" }],
-    }),
-  ]);
-
-  return { nowShowing, comingSoon };
-}
-
-function getRatingClass(rating) {
-  if (!rating) return "";
-  if (rating === "P") return "P";
-  if (rating.includes("13")) return "T13";
-  if (rating.includes("16")) return "T16";
-  if (rating.includes("18")) return "T18";
-  return "";
-}

@@ -276,13 +276,3 @@ export default function AdminCombosPage() {
       </div>
   );
 }
-
-
-
-
-const TYPE_LABELS = {
-  combo: "Combo",
-  popcorn: "Bắp",
-  drink: "Nước",
-  snack: "Snack"
-};

@@ -198,38 +198,3 @@ export async function DELETE(request, { params }) {
     return NextResponse.json({ error: 'Không thể xóa phim.' }, { status: 500 });
   }
 }
-
-
-
-const toISODate = (value) => (value ? value.toISOString().split('T')[0] : '');
-
-const mapMovie = async (movie) => {
-  const soldTickets = await prisma.booking_items.count({
-    where: {
-      booking: {
-        showtime: { movie_id: movie.id },
-      },
-    },
-  });
-
-  return {
-    id: Number(movie.id),
-    title: movie.title,
-    poster: movie.poster_url,
-    backdrop: movie.backdrop_url,
-    trailer: movie.trailer_url,
-    synopsis: movie.synopsis,
-    genres: movie.genres,
-    language: movie.language,
-    country: movie.country,
-    director: movie.director,
-    cast: movie.cast,
-    status: movie.status,
-    releaseDate: toISODate(movie.release_date),
-    duration: movie.duration_minutes ?? 0,
-    rating: movie.rating ?? '',
-    isFeatured: movie.is_featured,
-    totalShows: movie._count?.showtimes ?? 0,
-    soldTickets,
-  };
-};

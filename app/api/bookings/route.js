@@ -193,23 +193,3 @@ export async function GET(request) {
     return NextResponse.json({ error: "Lỗi server" }, { status: 500 });
   }
 }
-
-
-
-
-
-
-
-
-import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
-
-// Tạo mã đặt vé ngẫu nhiên
-function generateBookingCode() {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let code = "";
-  for (let i = 0; i < 8; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
-}

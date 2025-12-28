@@ -348,28 +348,3 @@ export default function SchedulePage() {
     </div>
   );
 }
-
-
-
-
-
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import MoviePoster from "@/components/MoviePoster";
-import Link from "next/link";
-
-function getWeekday(dateStr) {
-  const [day, month, year] = dateStr.split("/");
-  const date = new Date(Number(year), Number(month) - 1, Number(day));
-  const weekdays = ["Chủ Nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"];
-  return weekdays[date.getDay()];
-}
-
-function getRatingDescription(rating) {
-  if (!rating) return "";
-  if (rating === "P") return "P: Phim dành cho mọi đối tượng khán giả";
-  if (rating.includes("13")) return "T13: Phim dành cho khán giả từ đủ 13 tuổi trở lên (13+)";
-  if (rating.includes("16")) return "T16: Phim dành cho khán giả từ đủ 16 tuổi trở lên (16+)";
-  if (rating.includes("18")) return "T18: Phim dành cho khán giả từ đủ 18 tuổi trở lên (18+)";
-  return "";
-}
