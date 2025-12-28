@@ -1,11 +1,11 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -86,87 +86,89 @@ export default function ResetPasswordPage() {
 
   if (success) {
     return (
-      <>
-        <Header />
-        <main className="login-container">
-          <div className="login-box">
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "64px", marginBottom: "20px" }}>✅</div>
-              <h2>Đặt lại mật khẩu thành công!</h2>
-              <p style={{ color: "var(--text-muted)", margin: "20px 0" }}>
-                Bạn sẽ được chuyển đến trang đăng nhập sau 3 giây...
-              </p>
-              <Link href="/login" className="btn-login" style={{ textDecoration: "none", display: "inline-block" }}>
-                Đăng nhập ngay
-              </Link>
-            </div>
-          </div>
-        </main>
-        <Footer />
-      </>
+      <div className="login-box">
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: "64px", marginBottom: "20px" }}>✅</div>
+          <h2>Đặt lại mật khẩu thành công!</h2>
+          <p style={{ color: "var(--text-muted)", margin: "20px 0" }}>
+            Bạn sẽ được chuyển đến trang đăng nhập sau 3 giây...
+          </p>
+          <Link href="/login" className="btn-login" style={{ textDecoration: "none", display: "inline-block" }}>
+            Đăng nhập ngay
+          </Link>
+        </div>
+      </div>
     );
   }
 
   return (
+    <div className="login-box">
+      <h2>Đặt lại mật khẩu</h2>
+
+      {message && (
+        <div className={`general-error ${message.includes("thành công") ? "success" : ""}`}>
+          {message}
+        </div>
+      )}
+
+      {!token ? (
+        <div style={{ textAlign: "center", padding: "40px 0" }}>
+          <p style={{ color: "var(--text-muted)" }}>
+            Link không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu link mới.
+          </p>
+          <Link href="/forgot-password" className="btn-login" style={{ textDecoration: "none", display: "inline-block", marginTop: "20px" }}>
+            Yêu cầu link mới
+          </Link>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} autoComplete="off">
+          <div className="form-group">
+            <label htmlFor="password">Mật khẩu mới</label>
+            <input
+              id="password"
+              type="password"
+              placeholder="Nhập mật khẩu mới (tối thiểu 8 ký tự)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
+            />
+            {passwordError && <div className="error-message">{passwordError}</div>}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="confirmPassword">Xác nhận mật khẩu</label>
+            <input
+              id="confirmPassword"
+              type="password"
+              placeholder="Nhập lại mật khẩu mới"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              disabled={isLoading}
+            />
+            {confirmPasswordError && <div className="error-message">{confirmPasswordError}</div>}
+          </div>
+
+          <button type="submit" className="btn-login" disabled={isLoading || !token}>
+            {isLoading ? "Đang xử lý..." : "Đặt lại mật khẩu"}
+          </button>
+        </form>
+      )}
+
+      <p className="register-text">
+        <Link href="/login">Quay lại đăng nhập</Link>
+      </p>
+    </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
     <>
       <Header />
       <main className="login-container">
-        <div className="login-box">
-          <h2>Đặt lại mật khẩu</h2>
-
-          {message && (
-            <div className={`general-error ${message.includes("thành công") ? "success" : ""}`}>
-              {message}
-            </div>
-          )}
-
-          {!token ? (
-            <div style={{ textAlign: "center", padding: "40px 0" }}>
-              <p style={{ color: "var(--text-muted)" }}>
-                Link không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu link mới.
-              </p>
-              <Link href="/forgot-password" className="btn-login" style={{ textDecoration: "none", display: "inline-block", marginTop: "20px" }}>
-                Yêu cầu link mới
-              </Link>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} autoComplete="off">
-              <div className="form-group">
-                <label htmlFor="password">Mật khẩu mới</label>
-                <input
-                  id="password"
-                  type="password"
-                  placeholder="Nhập mật khẩu mới (tối thiểu 8 ký tự)"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isLoading}
-                />
-                {passwordError && <div className="error-message">{passwordError}</div>}
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="confirmPassword">Xác nhận mật khẩu</label>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="Nhập lại mật khẩu mới"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  disabled={isLoading}
-                />
-                {confirmPasswordError && <div className="error-message">{confirmPasswordError}</div>}
-              </div>
-
-              <button type="submit" className="btn-login" disabled={isLoading || !token}>
-                {isLoading ? "Đang xử lý..." : "Đặt lại mật khẩu"}
-              </button>
-            </form>
-          )}
-
-          <p className="register-text">
-            <Link href="/login">Quay lại đăng nhập</Link>
-          </p>
-        </div>
+        <Suspense fallback={<div className="login-box"><div className="loading-state">Đang tải...</div></div>}>
+          <ResetPasswordContent />
+        </Suspense>
       </main>
       <Footer />
     </>

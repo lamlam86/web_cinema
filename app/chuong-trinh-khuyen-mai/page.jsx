@@ -85,21 +85,3 @@ export default async function PromotionsPage() {
     </div>
   );
 }
-
-
-
-import { prisma } from "@/lib/prisma";
-
-async function getPromotions() {
-  const promotions = await prisma.promotions.findMany({
-    where: {
-      status: "active",
-      OR: [
-        { end_date: null },
-        { end_date: { gte: new Date() } }
-      ]
-    },
-    orderBy: { id: "desc" }
-  });
-  return promotions;
-}

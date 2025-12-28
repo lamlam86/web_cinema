@@ -1,10 +1,10 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect") || "/";
@@ -18,14 +18,12 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [userLoading, setUserLoading] = useState(true);
 
-  // Check if user is already logged in
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const res = await fetch("/api/auth/me");
         const data = await res.json();
         if (data.success && data.user) {
-          // User is already logged in, redirect
           if (data.user.roles?.includes("admin") && redirectUrl === "/") {
             router.replace("/admin");
           } else {
@@ -33,7 +31,7 @@ export default function LoginPage() {
           }
         }
       } catch {
-        // Not logged in, stay on login page
+        // Not logged in
       } finally {
         setUserLoading(false);
       }
@@ -86,13 +84,12 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (data.success) {
-        // Redirect to where user came from, or admin if admin/staff
         if (data.user?.roles.includes("admin") && redirectUrl === "/") {
           router.push("/admin");
         } else {
           router.push(redirectUrl);
         }
-        router.refresh(); // Refresh to update user state in Header
+        router.refresh();
       } else {
         setGeneralError(data.message);
       }
@@ -105,84 +102,86 @@ export default function LoginPage() {
 
   if (userLoading) {
     return (
-      <>
-        <Header />
-        <main className="login-container">
-          <div className="login-box">
-            <h2>Đang tải...</h2>
-          </div>
-        </main>
-        <Footer />
-      </>
+      <div className="login-box">
+        <h2>Đang tải...</h2>
+      </div>
     );
   }
 
   return (
+    <div className="login-box">
+      <h2>Đăng nhập tài khoản</h2>
+
+      {redirectUrl !== "/" && (
+        <div className="login-notice">
+          🎟️ Vui lòng đăng nhập để tiếp tục đặt vé
+        </div>
+      )}
+
+      {generalError && (
+        <div className="general-error">{generalError}</div>
+      )}
+
+      <form id="loginForm" autoComplete="off" noValidate onSubmit={onSubmit}>
+        <div className="form-group">
+          <label htmlFor="email">Email</label>
+          <input
+            id="email"
+            type="email"
+            placeholder="Nhập email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={isLoading}
+          />
+          {emailError && <div className="error-message">{emailError}</div>}
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="password">Mật khẩu</label>
+          <input
+            id="password"
+            type="password"
+            placeholder="Nhập mật khẩu"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={isLoading}
+          />
+          {passwordError && <div className="error-message">{passwordError}</div>}
+        </div>
+
+        <div className="form-options">
+          <label className="remember-me">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              disabled={isLoading}
+            />
+            <span>Ghi nhớ đăng nhập (30 ngày)</span>
+          </label>
+          <a href="/forgot-password" className="forgot-password">Quên mật khẩu?</a>
+        </div>
+
+        <button type="submit" className="btn-login" disabled={isLoading}>
+          {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
+        </button>
+      </form>
+
+      <p className="register-text">
+        Chưa có tài khoản? <a href="/signup">Đăng ký tại đây</a>
+      </p>
+    </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
     <>
       <Header />
       <main className="login-container">
-        <div className="login-box">
-          <h2>Đăng nhập tài khoản</h2>
-
-          {redirectUrl !== "/" && (
-            <div className="login-notice">
-              🎟️ Vui lòng đăng nhập để tiếp tục đặt vé
-            </div>
-          )}
-
-          {generalError && (
-            <div className="general-error">{generalError}</div>
-          )}
-
-          <form id="loginForm" autoComplete="off" noValidate onSubmit={onSubmit}>
-            <div className="form-group">
-              <label htmlFor="email">Email</label>
-              <input
-                id="email"
-                type="email"
-                placeholder="Nhập email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
-              />
-              {emailError && <div className="error-message">{emailError}</div>}
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="password">Mật khẩu</label>
-              <input
-                id="password"
-                type="password"
-                placeholder="Nhập mật khẩu"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
-              />
-              {passwordError && <div className="error-message">{passwordError}</div>}
-            </div>
-
-            <div className="form-options">
-              <label className="remember-me">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  disabled={isLoading}
-                />
-                <span>Ghi nhớ đăng nhập (30 ngày)</span>
-              </label>
-              <a href="/forgot-password" className="forgot-password">Quên mật khẩu?</a>
-            </div>
-
-            <button type="submit" className="btn-login" disabled={isLoading}>
-              {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
-            </button>
-          </form>
-
-          <p className="register-text">
-            Chưa có tài khoản? <a href="/signup">Đăng ký tại đây</a>
-          </p>
-        </div>
+        <Suspense fallback={<div className="login-box"><h2>Đang tải...</h2></div>}>
+          <LoginContent />
+        </Suspense>
       </main>
       <Footer />
     </>

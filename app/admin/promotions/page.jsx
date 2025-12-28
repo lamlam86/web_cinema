@@ -345,13 +345,3 @@ export default function AdminPromotionsPage() {
       </div>
   );
 }
-
-
-
-
-const STATUS_LABELS = {
-  draft: "Nháp",
-  active: "Hoạt động",
-  expired: "Hết hạn",
-  disabled: "Vô hiệu"
-};

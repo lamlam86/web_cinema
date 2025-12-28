@@ -5,13 +5,3 @@ export const metadata = {
 export default function StaffLayout({ children }) {
   return children;
 }
-
-
-
-
-
-
-
-
-  title: "Staff Dashboard - LMK Cinema",
-};

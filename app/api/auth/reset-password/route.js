@@ -82,12 +82,3 @@ export async function POST(request) {
     );
   }
 }
-
-
-
-
-import { prisma } from "@/lib/prisma";
-import { hashPassword } from "@/lib/auth";
-import jwt from "jsonwebtoken";
-
-const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-key-change-in-production";
