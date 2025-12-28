@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashPassword } from "@/lib/auth";
-import jwt from "jsonwebtoken";
-
-const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-key-change-in-production";
+import { verifyToken, hashPassword } from "@/lib/auth";
 
 export async function POST(request) {
   try {
@@ -12,61 +9,35 @@ export async function POST(request) {
 
     if (!token || !password) {
       return NextResponse.json(
-        { success: false, message: "Thiếu thông tin" },
+        { success: false, message: "Token và mật khẩu là bắt buộc" },
         { status: 400 }
       );
     }
 
-    if (password.length < 8) {
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(password)) {
       return NextResponse.json(
-        { success: false, message: "Mật khẩu tối thiểu 8 ký tự" },
+        {
+          success: false,
+          message: "Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt",
+        },
         { status: 400 }
       );
     }
 
-    // Verify token
-    let decoded;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET);
-      if (decoded.type !== "password_reset") {
-        return NextResponse.json(
-          { success: false, message: "Token không hợp lệ" },
-          { status: 400 }
-        );
-      }
-    } catch (error) {
+    const decoded = verifyToken(token);
+
+    if (!decoded || decoded.purpose !== "reset_password") {
       return NextResponse.json(
-        { success: false, message: "Link đã hết hạn hoặc không hợp lệ" },
+        { success: false, message: "Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn" },
         { status: 400 }
       );
     }
 
-    // Tìm user
-    const user = await prisma.users.findUnique({
-      where: { id: BigInt(decoded.userId) },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Người dùng không tồn tại" },
-        { status: 404 }
-      );
-    }
-
-    // Kiểm tra email khớp
-    if (user.email !== decoded.email) {
-      return NextResponse.json(
-        { success: false, message: "Token không hợp lệ" },
-        { status: 400 }
-      );
-    }
-
-    // Hash password mới
     const hashedPassword = await hashPassword(password);
 
-    // Cập nhật password
     await prisma.users.update({
-      where: { id: user.id },
+      where: { id: BigInt(decoded.userId) },
       data: { password_hash: hashedPassword },
     });
 
@@ -77,7 +48,7 @@ export async function POST(request) {
   } catch (error) {
     console.error("Reset password error:", error);
     return NextResponse.json(
-      { success: false, message: "Đã có lỗi xảy ra" },
+      { success: false, message: "Đã có lỗi xảy ra, vui lòng thử lại" },
       { status: 500 }
     );
   }

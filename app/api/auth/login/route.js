@@ -48,18 +48,19 @@ export async function POST(request) {
 
     const roles = user.user_roles.map((ur) => ur.role.name);
 
-    // Set auth cookies with session
-    const { sessionId } = await setAuthCookies({
-      id: user.id.toString(),
-      email: user.email,
-      fullName: user.full_name,
-      roles,
-    }, rememberMe);
+    const { sessionId } = await setAuthCookies(
+      {
+        id: user.id.toString(),
+        email: user.email,
+        fullName: user.full_name,
+        roles,
+      },
+      rememberMe
+    );
 
-    // Update last login time
     await prisma.users.update({
       where: { id: user.id },
-      data: { updated_at: new Date() }
+      data: { updated_at: new Date() },
     });
 
     return NextResponse.json({
@@ -75,8 +76,8 @@ export async function POST(request) {
       },
       session: {
         id: sessionId,
-        expiresIn: rememberMe ? "30 ngày" : "7 ngày"
-      }
+        expiresIn: rememberMe ? "30 ngày" : "7 ngày",
+      },
     });
   } catch (error) {
     console.error("Login error:", error);

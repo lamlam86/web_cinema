@@ -1,200 +1,129 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-
-const toISODate = (value) => (value ? value.toISOString().split('T')[0] : '');
-
-const mapMovie = async (movie) => {
-  const soldTickets = await prisma.booking_items.count({
-    where: {
-      booking: {
-        showtime: { movie_id: movie.id },
-      },
-    },
-  });
-
-  return {
-    id: Number(movie.id),
-    title: movie.title,
-    poster: movie.poster_url,
-    backdrop: movie.backdrop_url,
-    trailer: movie.trailer_url,
-    synopsis: movie.synopsis,
-    genres: movie.genres,
-    language: movie.language,
-    country: movie.country,
-    director: movie.director,
-    cast: movie.cast,
-    status: movie.status,
-    releaseDate: toISODate(movie.release_date),
-    duration: movie.duration_minutes ?? 0,
-    rating: movie.rating ?? '',
-    isFeatured: movie.is_featured,
-    totalShows: movie._count?.showtimes ?? 0,
-    soldTickets,
-  };
-};
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request, { params }) {
   try {
-    const { id: paramId } = await params;
-    const id = Number(paramId);
-    if (Number.isNaN(id)) {
-      return NextResponse.json({ error: 'ID không hợp lệ.' }, { status: 400 });
-    }
+    const { id } = await params;
 
     const movie = await prisma.movies.findUnique({
-      where: { id },
+      where: { id: BigInt(id) },
       include: {
         showtimes: {
           where: {
             start_time: { gte: new Date() },
             status: { in: ["scheduled", "selling"] },
           },
-          orderBy: { start_time: "asc" },
-          take: 50,
           include: {
             screen: {
               include: { branch: true },
             },
           },
+          orderBy: { start_time: "asc" },
         },
-      },
-    });
-
-    if (!movie) {
-      return NextResponse.json({ error: 'Không tìm thấy phim.' }, { status: 404 });
-    }
-
-    const relatedMovies = await prisma.movies.findMany({
-      where: {
-        id: { not: id },
-        status: "now_showing",
-      },
-      take: 4,
-      orderBy: { release_date: "desc" },
-    });
-
-    const dates = [...new Set(
-      movie.showtimes.map(st => {
-        const d = new Date(st.start_time);
-        return d.toLocaleDateString("vi-VN");
-      })
-    )].slice(0, 7);
-
-    return NextResponse.json({
-      movie: {
-        id: Number(movie.id),
-        title: movie.title,
-        slug: movie.slug,
-        synopsis: movie.synopsis,
-        genres: movie.genres,
-        duration_minutes: movie.duration_minutes,
-        rating: movie.rating,
-        language: movie.language,
-        country: movie.country,
-        director: movie.director,
-        cast: movie.cast,
-        poster_url: movie.poster_url,
-        backdrop_url: movie.backdrop_url,
-        trailer_url: movie.trailer_url,
-        status: movie.status,
-        release_date: movie.release_date,
-        is_featured: movie.is_featured,
-        showtimes: movie.showtimes.map(st => ({
-          id: Number(st.id),
-          start_time: st.start_time,
-          end_time: st.end_time,
-          base_price: Number(st.base_price),
-          screen: {
-            id: Number(st.screen.id),
-            name: st.screen.name,
-            branch: {
-              id: Number(st.screen.branch.id),
-              name: st.screen.branch.name,
-              address: st.screen.branch.address,
-            },
-          },
-        })),
-      },
-      relatedMovies: relatedMovies.map(m => ({
-        id: Number(m.id),
-        title: m.title,
-        poster_url: m.poster_url,
-        rating: m.rating,
-      })),
-      dates,
-    });
-  } catch (error) {
-    console.error('GET /api/movies/[id] failed', error);
-    return NextResponse.json({ error: 'Không thể lấy thông tin phim.' }, { status: 500 });
-  }
-}
-
-export async function PATCH(request, { params }) {
-  try {
-    const { id: paramId } = await params;
-    const id = Number(paramId);
-    if (Number.isNaN(id)) {
-      return NextResponse.json({ error: 'ID không hợp lệ.' }, { status: 400 });
-    }
-
-    const body = await request.json();
-
-    let slug = undefined;
-    if (body.title) {
-      slug = body.title
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/đ/g, 'd')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '');
-    }
-
-    const movie = await prisma.movies.update({
-      where: { id },
-      data: {
-        ...(body.title ? { title: body.title, slug } : {}),
-        ...(body.status ? { status: body.status } : {}),
-        ...(body.poster !== undefined ? { poster_url: body.poster } : {}),
-        ...(body.backdrop !== undefined ? { backdrop_url: body.backdrop } : {}),
-        ...(body.trailer !== undefined ? { trailer_url: body.trailer } : {}),
-        ...(body.synopsis !== undefined ? { synopsis: body.synopsis } : {}),
-        ...(body.genres !== undefined ? { genres: body.genres } : {}),
-        ...(body.language !== undefined ? { language: body.language } : {}),
-        ...(body.country !== undefined ? { country: body.country } : {}),
-        ...(body.director !== undefined ? { director: body.director } : {}),
-        ...(body.cast !== undefined ? { cast: body.cast } : {}),
-        ...(body.releaseDate !== undefined ? { release_date: body.releaseDate ? new Date(body.releaseDate) : null } : {}),
-        ...(body.duration !== undefined ? { duration_minutes: body.duration } : {}),
-        ...(body.rating !== undefined ? { rating: body.rating } : {}),
-        ...(body.isFeatured !== undefined ? { is_featured: body.isFeatured } : {}),
-      },
-      include: {
         _count: { select: { showtimes: true } },
       },
     });
 
-    const data = await mapMovie(movie);
+    if (!movie) {
+      return NextResponse.json({ error: "Không tìm thấy phim" }, { status: 404 });
+    }
+
+    const data = {
+      id: Number(movie.id),
+      title: movie.title,
+      slug: movie.slug,
+      poster: movie.poster_url,
+      backdrop: movie.backdrop_url,
+      trailer: movie.trailer_url,
+      synopsis: movie.synopsis,
+      genres: movie.genres,
+      language: movie.language,
+      country: movie.country,
+      director: movie.director,
+      cast: movie.cast,
+      status: movie.status,
+      releaseDate: movie.release_date?.toISOString().split("T")[0] || "",
+      duration: movie.duration_minutes ?? 0,
+      rating: movie.rating ?? "",
+      isFeatured: movie.is_featured,
+      showtimes: movie.showtimes.map((st) => ({
+        id: Number(st.id),
+        startTime: st.start_time,
+        endTime: st.end_time,
+        basePrice: Number(st.base_price),
+        screen: {
+          id: st.screen.id,
+          name: st.screen.name,
+          type: st.screen.type,
+        },
+        branch: st.screen.branch
+          ? {
+              id: st.screen.branch.id,
+              name: st.screen.branch.name,
+              address: st.screen.branch.address,
+              city: st.screen.branch.city,
+            }
+          : null,
+      })),
+    };
+
     return NextResponse.json({ data });
   } catch (error) {
-    console.error('PATCH /api/movies/[id] failed', error);
-    return NextResponse.json({ error: 'Không thể cập nhật phim.' }, { status: 500 });
+    console.error("GET /api/movies/[id] failed", error);
+    return NextResponse.json({ error: "Lỗi server" }, { status: 500 });
+  }
+}
+
+export async function PUT(request, { params }) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+
+    const movie = await prisma.movies.update({
+      where: { id: BigInt(id) },
+      data: {
+        title: body.title,
+        poster_url: body.poster ?? null,
+        backdrop_url: body.backdrop ?? null,
+        trailer_url: body.trailer ?? null,
+        synopsis: body.synopsis ?? null,
+        genres: body.genres ?? null,
+        language: body.language ?? null,
+        country: body.country ?? null,
+        director: body.director ?? null,
+        cast: body.cast ?? null,
+        release_date: body.releaseDate ? new Date(body.releaseDate) : null,
+        duration_minutes: body.duration ?? null,
+        rating: body.rating ?? null,
+        status: body.status,
+        is_featured: body.isFeatured ?? false,
+      },
+    });
+
+    return NextResponse.json({
+      data: {
+        id: Number(movie.id),
+        title: movie.title,
+        status: movie.status,
+      },
+    });
+  } catch (error) {
+    console.error("PUT /api/movies/[id] failed", error);
+    return NextResponse.json({ error: "Không thể cập nhật phim" }, { status: 500 });
   }
 }
 
 export async function DELETE(request, { params }) {
   try {
-    const { id: paramId } = await params;
-    const id = Number(paramId);
-    if (Number.isNaN(id)) {
-      return NextResponse.json({ error: 'ID không hợp lệ.' }, { status: 400 });
-    }
+    const { id } = await params;
 
-    await prisma.movies.delete({ where: { id } });
+    await prisma.movies.delete({
+      where: { id: BigInt(id) },
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('DELETE /api/movies/[id] failed', error);
-    return NextResponse.json({ error: 'Không thể xóa phim.' }, { status: 500 });
+    console.error("DELETE /api/movies/[id] failed", error);
+    return NextResponse.json({ error: "Không thể xóa phim" }, { status: 500 });
   }
 }

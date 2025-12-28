@@ -5,22 +5,18 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "image.tmdb.org",
-        pathname: "/t/p/**",
       },
       {
         protocol: "https",
-        hostname: "www.cgv.vn",
-        pathname: "/media/**",
+        hostname: "**.cloudinary.com",
       },
     ],
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "2mb",
+    },
+  },
 };
- 
+
 export default nextConfig;
-
-
-
-
-
-
-

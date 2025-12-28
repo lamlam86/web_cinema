@@ -2,160 +2,90 @@
 import { useState, useEffect } from "react";
 
 export default function AdminCustomersPage() {
-  const [customers, setCustomers] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 1 });
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
 
   useEffect(() => {
-    fetchCustomers();
-  }, [pagination.page, search]);
+    fetchUsers();
+  }, []);
 
-  async function fetchCustomers() {
-    setLoading(true);
+  const fetchUsers = async () => {
     try {
-      const res = await fetch(`/api/admin/users?role=customer&page=${pagination.page}&search=${search}`);
+      const res = await fetch("/api/admin/users?role=customer");
       const data = await res.json();
-      setCustomers(data.users || []);
-      setPagination(prev => ({ ...prev, ...data.pagination }));
-    } catch (err) {
-      console.error(err);
+      if (data.users) {
+        setUsers(data.users);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
     } finally {
       setLoading(false);
     }
-  }
-
-  async function toggleStatus(customer) {
-    const newStatus = customer.status === "active" ? "blocked" : "active";
-    try {
-      await fetch(`/api/admin/users/${customer.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus })
-      });
-      fetchCustomers();
-    } catch (err) {
-      alert(err.message);
-    }
-  }
-
-  const stats = {
-    total: pagination.total,
-    active: customers.filter(c => c.status === "active").length,
-    totalPoints: customers.reduce((sum, c) => sum + (c.points || 0), 0)
   };
 
+  const formatDate = (dateStr) =>
+    new Date(dateStr).toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+
   return (
-      <div className="admin-stack">
-        <div className="page-heading">
-          <div>
-            <p className="admin-eyebrow">Vận hành</p>
-            <h2>Quản lý Khách hàng</h2>
-          </div>
+    <div>
+      <h2 style={{ marginBottom: "24px" }}>Quản lý khách hàng</h2>
+
+      {loading ? (
+        <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
+          <div className="loading-spinner" />
         </div>
-
-        {/* Stats */}
-        <section className="dashboard-kpi-grid">
-          <article className="dashboard-card kpi">
-            <p>Tổng khách hàng</p>
-            <strong>{stats.total}</strong>
-            <span>Đã đăng ký</span>
-          </article>
-          <article className="dashboard-card kpi">
-            <p>Đang hoạt động</p>
-            <strong>{stats.active}</strong>
-            <span>Trang hiện tại</span>
-          </article>
-          <article className="dashboard-card kpi">
-            <p>Tổng điểm</p>
-            <strong>{stats.totalPoints.toLocaleString()}</strong>
-            <span>Điểm tích lũy</span>
-          </article>
-        </section>
-
-        {/* Search */}
-        <div className="admin-filters">
-          <input
-            type="search"
-            placeholder="Tìm khách hàng..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPagination(p => ({...p, page: 1})); }}
-            className="admin-search"
-          />
-        </div>
-
-        {/* Table */}
-        {loading ? (
-          <div className="admin-loading">Đang tải...</div>
-        ) : (
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
+      ) : (
+        <div className="admin-table-wrapper">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Họ tên</th>
+                <th>Email</th>
+                <th>Số điện thoại</th>
+                <th>Điểm</th>
+                <th>Trạng thái</th>
+                <th>Ngày đăng ký</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.length === 0 ? (
                 <tr>
-                  <th>Khách hàng</th>
-                  <th>Email</th>
-                  <th>Số điện thoại</th>
-                  <th>Điểm</th>
-                  <th>Trạng thái</th>
-                  <th>Ngày tạo</th>
-                  <th>Thao tác</th>
+                  <td colSpan={7} className="admin-table-empty">
+                    Chưa có khách hàng nào
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {customers.length === 0 ? (
-                  <tr><td colSpan="7" className="admin-empty">Chưa có khách hàng nào</td></tr>
-                ) : (
-                  customers.map(customer => (
-                    <tr key={customer.id}>
-                      <td>
-                        <div className="admin-user-cell">
-                          <div className="admin-avatar">
-                            {customer.avatar_url ? (
-                              <img src={customer.avatar_url} alt="" />
-                            ) : (
-                              customer.full_name.charAt(0).toUpperCase()
-                            )}
-                          </div>
-                          <span>{customer.full_name}</span>
-                        </div>
-                      </td>
-                      <td>{customer.email}</td>
-                      <td>{customer.phone || "-"}</td>
-                      <td><strong>{(customer.points || 0).toLocaleString()}</strong></td>
-                      <td>
-                        <span className={`admin-badge admin-badge--${customer.status}`}>
-                          {customer.status === "active" ? "Hoạt động" : "Khóa"}
-                        </span>
-                      </td>
-                      <td>{new Date(customer.created_at).toLocaleDateString("vi-VN")}</td>
-                      <td>
-                        <div className="admin-actions">
-                          <button
-                            className="admin-action-btn"
-                            onClick={() => toggleStatus(customer)}
-                            title={customer.status === "active" ? "Khóa" : "Mở khóa"}
-                          >
-                            {customer.status === "active" ? "🔒" : "🔓"}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Pagination */}
-        {pagination.totalPages > 1 && (
-          <div className="admin-pagination">
-            <button disabled={pagination.page === 1} onClick={() => setPagination(p => ({...p, page: p.page - 1}))}>← Trước</button>
-            <span>Trang {pagination.page} / {pagination.totalPages}</span>
-            <button disabled={pagination.page >= pagination.totalPages} onClick={() => setPagination(p => ({...p, page: p.page + 1}))}>Sau →</button>
-          </div>
-        )}
-      </div>
+              ) : (
+                users.map((user) => (
+                  <tr key={user.id}>
+                    <td>
+                      <strong>{user.fullName}</strong>
+                    </td>
+                    <td>{user.email}</td>
+                    <td>{user.phone || "-"}</td>
+                    <td style={{ color: "var(--warning)" }}>{user.points}</td>
+                    <td>
+                      <span className={`status-badge status-badge--${user.status}`}>
+                        {user.status === "active" ? "Hoạt động" : "Khóa"}
+                      </span>
+                    </td>
+                    <td>{formatDate(user.createdAt)}</td>
+                    <td>
+                      <div className="admin-actions">
+                        <button className="admin-chip">Chi tiết</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { removeAuthCookie } from "@/lib/auth";
+import { removeAuthCookies } from "@/lib/auth";
 
 export async function POST() {
   try {
-    await removeAuthCookie();
+    await removeAuthCookies();
     return NextResponse.json({
       success: true,
       message: "Đăng xuất thành công",

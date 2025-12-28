@@ -1,36 +1,24 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET - Lấy danh sách bắp nước
-export async function GET() {
+export async function GET(request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get("type");
+
     const concessions = await prisma.concessions.findMany({
-      orderBy: [{ type: "asc" }, { price: "asc" }],
+      where: type ? { type } : {},
+      orderBy: { name: "asc" },
     });
 
-    // Group by type
-    const grouped = concessions.reduce((acc, item) => {
-      if (!acc[item.type]) acc[item.type] = [];
-      acc[item.type].push({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        price: Number(item.price),
-        image_url: item.image_url,
-        type: item.type,
-      });
-      return acc;
-    }, {});
-
     return NextResponse.json({
-      concessions: grouped,
-      all: concessions.map((item) => ({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        price: Number(item.price),
-        image_url: item.image_url,
-        type: item.type,
+      concessions: concessions.map((c) => ({
+        id: c.id,
+        name: c.name,
+        description: c.description,
+        price: Number(c.price),
+        type: c.type,
+        image_url: c.image_url,
       })),
     });
   } catch (error) {

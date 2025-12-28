@@ -1,6 +1,7 @@
 "use client";
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
@@ -8,167 +9,121 @@ function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect") || "/";
-  
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [rememberMe, setRememberMe] = useState(false);
-  const [emailError, setEmailError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
+  const [errors, setErrors] = useState({});
   const [generalError, setGeneralError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [userLoading, setUserLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await fetch("/api/auth/me");
-        const data = await res.json();
-        if (data.success && data.user) {
-          if (data.user.roles?.includes("admin") && redirectUrl === "/") {
-            router.replace("/admin");
-          } else {
-            router.replace(redirectUrl);
-          }
-        }
-      } catch {
-        // Not logged in
-      } finally {
-        setUserLoading(false);
-      }
-    };
-    checkAuth();
-  }, [router, redirectUrl]);
-
-  const validateForm = () => {
-    let valid = true;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    setEmailError("");
-    setPasswordError("");
-    setGeneralError("");
-
-    if (!email.trim()) {
-      setEmailError("Vui lòng nhập email");
-      valid = false;
-    } else if (!emailRegex.test(email)) {
-      setEmailError("Email không hợp lệ");
-      valid = false;
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
-
-    if (!password) {
-      setPasswordError("Vui lòng nhập mật khẩu");
-      valid = false;
-    } else if (password.length < 8) {
-      setPasswordError("Mật khẩu tối thiểu 8 ký tự");
-      valid = false;
+    if (generalError) {
+      setGeneralError("");
     }
-
-    return valid;
   };
 
-  const onSubmit = async (e) => {
+  const validate = () => {
+    const newErrors = {};
+    if (!formData.email.trim()) {
+      newErrors.email = "Vui lòng nhập email";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Email không hợp lệ";
+    }
+    if (!formData.password) {
+      newErrors.password = "Vui lòng nhập mật khẩu";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validate()) return;
 
-    if (!validateForm()) return;
-
-    setIsLoading(true);
+    setLoading(true);
     setGeneralError("");
 
     try {
-      const response = await fetch("/api/auth/login", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, rememberMe }),
+        body: JSON.stringify({ ...formData, rememberMe }),
       });
 
-      const data = await response.json();
+      const data = await res.json();
 
       if (data.success) {
-        if (data.user?.roles.includes("admin") && redirectUrl === "/") {
-          router.push("/admin");
-        } else {
-          router.push(redirectUrl);
-        }
+        router.push(redirectUrl);
         router.refresh();
       } else {
-        setGeneralError(data.message);
+        setGeneralError(data.message || "Đăng nhập thất bại");
       }
-    } catch {
-      setGeneralError("Không thể kết nối đến server. Vui lòng thử lại.");
+    } catch (error) {
+      setGeneralError("Đã có lỗi xảy ra, vui lòng thử lại");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
-
-  if (userLoading) {
-    return (
-      <div className="login-box">
-        <h2>Đang tải...</h2>
-      </div>
-    );
-  }
 
   return (
     <div className="login-box">
       <h2>Đăng nhập tài khoản</h2>
 
-      {redirectUrl !== "/" && (
-        <div className="login-notice">
-          🎟️ Vui lòng đăng nhập để tiếp tục đặt vé
-        </div>
+      {searchParams.get("registered") && (
+        <div className="login-notice">Đăng ký thành công! Vui lòng đăng nhập.</div>
       )}
 
-      {generalError && (
-        <div className="general-error">{generalError}</div>
-      )}
+      {generalError && <div className="general-error">{generalError}</div>}
 
-      <form id="loginForm" autoComplete="off" noValidate onSubmit={onSubmit}>
+      <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="email">Email</label>
           <input
-            id="email"
             type="email"
-            placeholder="Nhập email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={isLoading}
+            id="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            placeholder="Nhập email của bạn"
           />
-          {emailError && <div className="error-message">{emailError}</div>}
+          {errors.email && <div className="error-message">{errors.email}</div>}
         </div>
 
         <div className="form-group">
           <label htmlFor="password">Mật khẩu</label>
           <input
-            id="password"
             type="password"
+            id="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
             placeholder="Nhập mật khẩu"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={isLoading}
           />
-          {passwordError && <div className="error-message">{passwordError}</div>}
+          {errors.password && <div className="error-message">{errors.password}</div>}
         </div>
 
         <div className="form-options">
           <label className="remember-me">
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              disabled={isLoading}
-            />
-            <span>Ghi nhớ đăng nhập (30 ngày)</span>
+            <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
+            Ghi nhớ đăng nhập
           </label>
-          <a href="/forgot-password" className="forgot-password">Quên mật khẩu?</a>
+          <Link href="/forgot-password" className="forgot-password">
+            Quên mật khẩu?
+          </Link>
         </div>
 
-        <button type="submit" className="btn-login" disabled={isLoading}>
-          {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
+        <button type="submit" className="btn-login" disabled={loading}>
+          {loading ? "Đang xử lý..." : "Đăng nhập"}
         </button>
       </form>
 
       <p className="register-text">
-        Chưa có tài khoản? <a href="/signup">Đăng ký tại đây</a>
+        Chưa có tài khoản? <Link href="/signup">Đăng ký ngay</Link>
       </p>
     </div>
   );
@@ -179,7 +134,13 @@ export default function LoginPage() {
     <>
       <Header />
       <main className="login-container">
-        <Suspense fallback={<div className="login-box"><h2>Đang tải...</h2></div>}>
+        <Suspense
+          fallback={
+            <div className="login-box">
+              <h2>Đang tải...</h2>
+            </div>
+          }
+        >
           <LoginContent />
         </Suspense>
       </main>

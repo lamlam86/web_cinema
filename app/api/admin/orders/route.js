@@ -1,62 +1,45 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 
-// GET - Lấy danh sách đơn hàng
-export async function GET(request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status");
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
+    const user = await getCurrentUser();
+    if (!user || (!user.roles?.includes("admin") && !user.roles?.includes("staff"))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    const where = status && status !== "all" ? { payment_status: status } : {};
-
-    const [bookings, total] = await Promise.all([
-      prisma.bookings.findMany({
-        where,
-        include: {
-          user: { select: { id: true, full_name: true, email: true } },
-          showtime: {
-            include: {
-              movie: { select: { title: true, poster_url: true } },
-              screen: { include: { branch: { select: { name: true } } } }
-            }
+    const bookings = await prisma.bookings.findMany({
+      include: {
+        booking_items: { include: { seat: true } },
+        showtime: {
+          include: {
+            movie: true,
+            screen: { include: { branch: true } },
           },
-          booking_items: { include: { seat: true } },
-          booking_concessions: { include: { concession: true } }
         },
-        orderBy: { created_at: "desc" },
-        skip: (page - 1) * limit,
-        take: limit
-      }),
-      prisma.bookings.count({ where })
-    ]);
+        user: true,
+      },
+      orderBy: { created_at: "desc" },
+      take: 100,
+    });
 
     return NextResponse.json({
-      data: bookings.map(b => ({
+      orders: bookings.map((b) => ({
         id: Number(b.id),
         booking_code: b.booking_code,
-        user: b.user ? { id: Number(b.user.id), name: b.user.full_name, email: b.user.email } : null,
+        total_amount: Number(b.total_amount),
+        status: b.status,
+        payment_status: b.payment_status,
+        created_at: b.created_at,
+        seats: b.booking_items.map((item) => item.seat.seat_code),
         movie: b.showtime.movie.title,
-        movie_poster: b.showtime.movie.poster_url,
         branch: b.showtime.screen.branch.name,
         screen: b.showtime.screen.name,
         showtime: b.showtime.start_time,
-        seats: b.booking_items.map(i => i.seat.seat_code),
-        concessions: b.booking_concessions.map(c => ({
-          name: c.concession.name,
-          quantity: c.quantity,
-          price: Number(c.unit_price)
-        })),
-        subtotal: Number(b.subtotal),
-        discount: Number(b.discount || 0),
-        total_amount: Number(b.total_amount),
-        payment_method: b.payment_method,
-        payment_status: b.payment_status,
-        status: b.status,
-        created_at: b.created_at
+        customer: b.user?.full_name || "Khách",
+        email: b.user?.email,
       })),
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
     });
   } catch (error) {
     console.error("GET /api/admin/orders error:", error);

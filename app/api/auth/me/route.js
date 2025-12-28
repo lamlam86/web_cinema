@@ -39,6 +39,7 @@ export async function GET() {
         email: user.email,
         phone: user.phone,
         avatarUrl: user.avatar_url,
+        points: user.points,
         roles,
       },
     });

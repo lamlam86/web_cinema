@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import jwt from "jsonwebtoken";
+import { generateToken } from "@/lib/auth";
 import { sendResetPasswordEmail } from "@/lib/email";
-
-const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-key-change-in-production";
 
 export async function POST(request) {
   try {
@@ -12,47 +10,39 @@ export async function POST(request) {
 
     if (!email) {
       return NextResponse.json(
-        { success: false, message: "Vui lòng nhập email" },
+        { success: false, message: "Email là bắt buộc" },
         { status: 400 }
       );
     }
 
-    // Tìm user
     const user = await prisma.users.findUnique({
       where: { email },
     });
 
-    // Luôn trả về success để không tiết lộ email có tồn tại không
+    // Always return success to prevent email enumeration
     if (!user) {
       return NextResponse.json({
         success: true,
-        message: "Nếu email tồn tại, chúng tôi đã gửi link đặt lại mật khẩu đến email của bạn.",
+        message: "Nếu email tồn tại, bạn sẽ nhận được link đặt lại mật khẩu",
       });
     }
 
-    // Tạo reset token (hết hạn sau 1 giờ)
-    const resetToken = jwt.sign(
-      { userId: user.id.toString(), email: user.email, type: "password_reset" },
-      JWT_SECRET,
-      { expiresIn: "1h" }
-    );
+    const token = generateToken({
+      userId: user.id.toString(),
+      email: user.email,
+      purpose: "reset_password",
+    });
 
-    // Gửi email reset password
-    try {
-      await sendResetPasswordEmail(user.email, user.full_name, resetToken);
-    } catch (emailError) {
-      console.error("Error sending reset password email:", emailError);
-      // Vẫn trả về success để không tiết lộ lỗi
-    }
+    await sendResetPasswordEmail(user.email, user.full_name, token);
 
     return NextResponse.json({
       success: true,
-      message: "Nếu email tồn tại, chúng tôi đã gửi link đặt lại mật khẩu đến email của bạn.",
+      message: "Nếu email tồn tại, bạn sẽ nhận được link đặt lại mật khẩu",
     });
   } catch (error) {
     console.error("Forgot password error:", error);
     return NextResponse.json(
-      { success: false, message: "Đã có lỗi xảy ra" },
+      { success: false, message: "Đã có lỗi xảy ra, vui lòng thử lại" },
       { status: 500 }
     );
   }

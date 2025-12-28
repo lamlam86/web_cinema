@@ -1,24 +1,17 @@
 "use client";
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
-export default function StaffRedirect() {
+export default function StaffPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Staff và Admin dùng chung panel /admin
-    router.replace("/admin");
+    router.push("/admin");
   }, [router]);
 
   return (
-    <div style={{ 
-      display: "flex", 
-      alignItems: "center", 
-      justifyContent: "center", 
-      height: "100vh",
-      background: "#0a0a0f",
-      color: "#fff"
-    }}>
+    <div className="admin-loading-screen">
+      <div className="admin-loading-spinner" />
       <p>Đang chuyển hướng...</p>
     </div>
   );

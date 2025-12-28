@@ -5,24 +5,25 @@ export async function GET() {
   try {
     const movies = await prisma.movies.findMany({
       where: {
-        is_featured: true,
-        status: { in: ["now_showing", "coming_soon"] }
+        OR: [{ is_featured: true }, { status: "now_showing" }],
       },
-      orderBy: { release_date: "desc" },
-      take: 5
+      orderBy: [{ is_featured: "desc" }, { created_at: "desc" }],
+      take: 10,
     });
 
-    return NextResponse.json({
-      movies: movies.map(m => ({
-        id: Number(m.id),
-        title: m.title,
-        poster_url: m.poster_url,
-        backdrop_url: m.backdrop_url,
-        rating: m.rating
-      }))
-    });
+    const data = movies.map((movie) => ({
+      id: Number(movie.id),
+      title: movie.title,
+      poster: movie.poster_url,
+      backdrop: movie.backdrop_url,
+      trailer: movie.trailer_url,
+      status: movie.status,
+      isFeatured: movie.is_featured,
+    }));
+
+    return NextResponse.json({ data });
   } catch (error) {
-    console.error("GET /api/movies/featured error:", error);
+    console.error("GET /api/movies/featured failed", error);
     return NextResponse.json({ error: "Lỗi server" }, { status: 500 });
   }
 }

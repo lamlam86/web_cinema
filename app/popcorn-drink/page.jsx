@@ -2,163 +2,122 @@
 import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import CartDrawer from "@/components/CartDrawer";
 import { useCart } from "@/contexts/CartContext";
 
-export default function PopcornDrinkPage() {
+export default function ConcessionPage() {
   const [concessions, setConcessions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [quantities, setQuantities] = useState({});
-  const { addToCart } = useCart();
+  const [activeTab, setActiveTab] = useState("all");
+  const { addItem } = useCart();
 
   useEffect(() => {
-    const fetchConcessions = async () => {
-      try {
-        const res = await fetch("/api/concessions");
-        const data = await res.json();
-        if (data.success) {
-          setConcessions(data.concessions || []);
-        }
-      } catch (error) {
-        console.error("Failed to fetch concessions:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchConcessions();
   }, []);
 
-  const handleQuantityChange = (id, delta) => {
-    setQuantities(prev => ({
-      ...prev,
-      [id]: Math.max(0, (prev[id] || 0) + delta)
-    }));
-  };
-
-  const handleAddToCart = () => {
-    const items = Object.entries(quantities)
-      .filter(([, qty]) => qty > 0)
-      .map(([id, qty]) => {
-        const item = concessions.find(c => c.id === Number(id));
-        return { ...item, quantity: qty };
-      });
-
-    if (items.length > 0) {
-      const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-      addToCart({
-        type: "concession",
-        items,
-        total,
-        totalItems: items.reduce((sum, item) => sum + item.quantity, 0),
-      });
-      setQuantities({});
+  const fetchConcessions = async () => {
+    try {
+      const res = await fetch("/api/concessions");
+      const data = await res.json();
+      if (data.concessions) {
+        setConcessions(data.concessions);
+      }
+    } catch (error) {
+      console.error("Error fetching concessions:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const total = Object.entries(quantities).reduce((sum, [id, qty]) => {
-    const item = concessions.find(c => c.id === Number(id));
-    return sum + (item ? item.price * qty : 0);
-  }, 0);
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
+  };
+
+  const filteredItems = activeTab === "all" ? concessions : concessions.filter((c) => c.type === activeTab);
+
+  const tabs = [
+    { key: "all", label: "Tất cả" },
+    { key: "combo", label: "Combo" },
+    { key: "popcorn", label: "Bắp rang" },
+    { key: "drink", label: "Đồ uống" },
+    { key: "snack", label: "Snacks" },
+  ];
+
+  const handleAddToCart = (item) => {
+    addItem({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      image: item.image_url,
+      type: "concession",
+    });
+  };
 
   return (
     <div className="app">
       <Header />
-      <main className="container" style={{ padding: "2rem 1rem", minHeight: "60vh" }}>
-        <h1 style={{ marginBottom: "2rem", textAlign: "center" }}>Bắp & Nước</h1>
-        
-        {loading ? (
-          <p style={{ textAlign: "center" }}>Đang tải...</p>
-        ) : concessions.length === 0 ? (
-          <p style={{ textAlign: "center" }}>Chưa có sản phẩm</p>
-        ) : (
-          <>
-            <div style={{ 
-              display: "grid", 
-              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", 
-              gap: "1.5rem",
-              marginBottom: "2rem"
-            }}>
-              {concessions.map((item) => (
-                <div key={item.id} style={{ 
-                  background: "#1a1a2e", 
-                  borderRadius: "12px", 
-                  overflow: "hidden",
-                  border: "1px solid #333"
-                }}>
-                  {item.image_url && (
-                    <img 
-                      src={item.image_url} 
-                      alt={item.name}
-                      style={{ width: "100%", height: "180px", objectFit: "cover" }}
-                    />
-                  )}
-                  <div style={{ padding: "1rem" }}>
-                    <h3 style={{ marginBottom: "0.5rem" }}>{item.name}</h3>
-                    <p style={{ color: "#888", fontSize: "0.9rem", marginBottom: "0.5rem" }}>
-                      {item.description}
-                    </p>
-                    <p style={{ color: "#f5a623", fontWeight: "bold", marginBottom: "1rem" }}>
-                      {item.price?.toLocaleString("vi-VN")}đ
-                    </p>
-                    <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                      <button 
-                        onClick={() => handleQuantityChange(item.id, -1)}
-                        style={{ 
-                          width: "32px", 
-                          height: "32px", 
-                          borderRadius: "50%",
-                          border: "1px solid #f5a623",
-                          background: "transparent",
-                          color: "#f5a623",
-                          cursor: "pointer"
-                        }}
-                      >
-                        -
-                      </button>
-                      <span>{quantities[item.id] || 0}</span>
-                      <button 
-                        onClick={() => handleQuantityChange(item.id, 1)}
-                        style={{ 
-                          width: "32px", 
-                          height: "32px", 
-                          borderRadius: "50%",
-                          border: "1px solid #f5a623",
-                          background: "#f5a623",
-                          color: "#000",
-                          cursor: "pointer"
-                        }}
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                </div>
+      <CartDrawer />
+      <main>
+        <div className="container">
+          <section className="section">
+            <h1 className="section-heading">Bắp nước & Snacks</h1>
+
+            {/* Tabs */}
+            <div style={{ display: "flex", gap: "8px", marginBottom: "24px", overflowX: "auto", paddingBottom: "8px" }}>
+              {tabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className="btn-viewmore"
+                  style={{
+                    background: activeTab === tab.key ? "var(--primary)" : "rgba(255,255,255,0.05)",
+                    borderColor: activeTab === tab.key ? "var(--primary)" : "var(--border)",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                  }}
+                >
+                  {tab.label}
+                </button>
               ))}
             </div>
 
-            {total > 0 && (
-              <div style={{ 
-                position: "fixed", 
-                bottom: 0, 
-                left: 0, 
-                right: 0, 
-                background: "#1a1a2e",
-                padding: "1rem",
-                borderTop: "1px solid #333",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center"
-              }}>
-                <span>Tổng: <strong style={{ color: "#f5a623" }}>{total.toLocaleString("vi-VN")}đ</strong></span>
-                <button 
-                  onClick={handleAddToCart}
-                  className="btn-primary"
-                >
-                  Thêm vào giỏ
-                </button>
+            {loading ? (
+              <div style={{ display: "flex", justifyContent: "center", padding: "60px 0" }}>
+                <div className="loading-spinner" />
               </div>
+            ) : filteredItems.length > 0 ? (
+              <div className="branches-grid">
+                {filteredItems.map((item) => (
+                  <div key={item.id} className="branch-card">
+                    {item.image_url && (
+                      <img
+                        src={item.image_url}
+                        alt={item.name}
+                        style={{
+                          width: "100%",
+                          height: "150px",
+                          objectFit: "cover",
+                          borderRadius: "var(--radius-sm)",
+                          marginBottom: "12px",
+                        }}
+                      />
+                    )}
+                    <h3 className="branch-card__name">{item.name}</h3>
+                    {item.description && <p className="branch-card__address">{item.description}</p>}
+                    <p style={{ margin: "12px 0", fontSize: "1.2rem", fontWeight: 700, color: "var(--accent)" }}>
+                      {formatCurrency(item.price)}
+                    </p>
+                    <button className="btn-viewmore" style={{ width: "100%" }} onClick={() => handleAddToCart(item)}>
+                      Thêm vào giỏ
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="empty-message">Không có sản phẩm nào</p>
             )}
-          </>
-        )}
+          </section>
+        </div>
       </main>
       <Footer />
     </div>

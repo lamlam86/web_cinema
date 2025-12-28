@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 
-// Tạo mã đặt vé ngẫu nhiên
 function generateBookingCode() {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let code = "";
@@ -12,40 +11,29 @@ function generateBookingCode() {
   return code;
 }
 
-// POST - Tạo đặt vé mới
 export async function POST(request) {
   try {
     const user = await getCurrentUser();
     const body = await request.json();
-
     const { showtime_id, seats, concessions, payment_method = "momo" } = body;
 
-    // Validate
     if (!showtime_id || !seats || seats.length === 0) {
-      return NextResponse.json(
-        { error: "Thiếu thông tin đặt vé" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Thiếu thông tin đặt vé" }, { status: 400 });
     }
 
-    // Kiểm tra suất chiếu
     const showtime = await prisma.showtimes.findUnique({
-      where: { id: Number(showtime_id) },
+      where: { id: BigInt(showtime_id) },
     });
 
     if (!showtime) {
-      return NextResponse.json(
-        { error: "Suất chiếu không tồn tại" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Suất chiếu không tồn tại" }, { status: 404 });
     }
 
-    // Kiểm tra ghế đã được đặt chưa
     const existingBookings = await prisma.booking_items.findMany({
       where: {
         seat_id: { in: seats.map((s) => s.seat_id) },
         booking: {
-          showtime_id: Number(showtime_id),
+          showtime_id: BigInt(showtime_id),
           status: { in: ["reserved", "confirmed"] },
         },
       },
@@ -58,14 +46,12 @@ export async function POST(request) {
       );
     }
 
-    // Tính tổng tiền vé
     const seatPrices = seats.map((s) => ({
       seat_id: s.seat_id,
       price: s.price || Number(showtime.base_price),
     }));
     const ticketSubtotal = seatPrices.reduce((sum, s) => sum + s.price, 0);
 
-    // Tính tổng tiền bắp nước
     let concessionSubtotal = 0;
     const concessionItems = [];
 
@@ -87,13 +73,12 @@ export async function POST(request) {
     }
 
     const subtotal = ticketSubtotal + concessionSubtotal;
-    const totalAmount = subtotal; // Có thể thêm discount sau
+    const totalAmount = subtotal;
 
-    // Tạo booking
     const booking = await prisma.bookings.create({
       data: {
         user_id: user ? BigInt(user.id) : null,
-        showtime_id: Number(showtime_id),
+        showtime_id: BigInt(showtime_id),
         booking_code: generateBookingCode(),
         subtotal,
         discount: 0,
@@ -112,12 +97,8 @@ export async function POST(request) {
         },
       },
       include: {
-        booking_items: {
-          include: { seat: true },
-        },
-        booking_concessions: {
-          include: { concession: true },
-        },
+        booking_items: { include: { seat: true } },
+        booking_concessions: { include: { concession: true } },
         showtime: {
           include: {
             movie: true,
@@ -148,7 +129,6 @@ export async function POST(request) {
   }
 }
 
-// GET - Lấy danh sách đặt vé của user
 export async function GET(request) {
   try {
     const user = await getCurrentUser();
@@ -159,9 +139,7 @@ export async function GET(request) {
     const bookings = await prisma.bookings.findMany({
       where: { user_id: BigInt(user.id) },
       include: {
-        booking_items: {
-          include: { seat: true },
-        },
+        booking_items: { include: { seat: true } },
         showtime: {
           include: {
             movie: true,

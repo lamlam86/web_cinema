@@ -1,160 +1,99 @@
-"use client";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import Link from "next/link";
-import { useCart } from "@/contexts/CartContext";
-
-const SERVICES = [
-  {
-    id: 1,
-    title: "Karaoke Box",
-    description: "Phòng karaoke hiện đại trong khuôn viên rạp chiếu phim",
-    icon: "🎤",
-    features: ["Phòng VIP", "Hệ thống âm thanh JBL", "Màn hình cảm ứng", "Đồ ăn nhẹ"],
-    price: "150,000 VND/giờ",
-  },
-  {
-    id: 2,
-    title: "Game Zone",
-    description: "Khu vực trò chơi điện tử với máy game mới nhất",
-    icon: "🎮",
-    features: ["PlayStation 5", "Xbox Series X", "Racing Simulator", "VR Experience"],
-    price: "từ 50,000 VND/lượt",
-  },
-  {
-    id: 3,
-    title: "Kidzone",
-    description: "Khu vui chơi an toàn dành riêng cho trẻ em",
-    icon: "🎠",
-    features: ["Nhà bóng", "Cầu trượt", "Xếp hình LEGO", "Nhân viên trông trẻ"],
-    price: "100,000 VND/2 giờ",
-  },
-  {
-    id: 4,
-    title: "Bowling",
-    description: "Bowling chuyên nghiệp với lane tiêu chuẩn quốc tế",
-    icon: "🎳",
-    features: ["6 làn bowling", "Giày bowling", "Bảng điểm tự động", "Huấn luyện viên"],
-    price: "80,000 VND/game",
-  },
-  {
-    id: 5,
-    title: "Billiards",
-    description: "Bàn bi-a cao cấp trong không gian sang trọng",
-    icon: "🎱",
-    features: ["Bàn Brunswick", "Đèn chuyên dụng", "Không gian riêng tư", "Đồ uống"],
-    price: "60,000 VND/giờ",
-  },
-  {
-    id: 6,
-    title: "Photo Booth",
-    description: "Khu vực chụp ảnh với nhiều backdrop và props",
-    icon: "📸",
-    features: ["Background đa dạng", "Props vui nhộn", "In ảnh tại chỗ", "Gửi email/share"],
-    price: "50,000 VND/4 ảnh",
-  },
-];
 
 export default function EntertainmentPage() {
-  const router = useRouter();
-  const { addToCart } = useCart();
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function checkUser() {
-      try {
-        const res = await fetch("/api/auth/me");
-        const data = await res.json();
-        if (data.success) setUser(data.user);
-      } catch (e) {}
-      finally { setLoading(false); }
-    }
-    checkUser();
-  }, []);
-
-  const handleBook = (serviceId) => {
-    const service = SERVICES.find(s => s.id === serviceId);
-    if (!service) return;
-    
-    // Extract price number from string like "150,000 VND/giờ"
-    const priceMatch = service.price.match(/[\d,]+/);
-    const price = priceMatch ? parseInt(priceMatch[0].replace(/,/g, '')) : 0;
-    
-    // Add to cart
-    addToCart({
-      type: 'service',
-      id: `service-${serviceId}`,
-      title: service.title,
-      description: service.description,
-      price: price,
-      icon: service.icon,
-      features: service.features,
-      priceDisplay: service.price,
-    });
-  };
-
   return (
     <div className="app">
       <Header />
-      <main className="entertainment-page">
+      <main>
         <div className="container">
-          <h1 className="page-title">DỊCH VỤ GIẢI TRÍ KHÁC</h1>
-          <p className="page-subtitle">Không chỉ là rạp chiếu phim - LMK Cinema là điểm đến giải trí toàn diện</p>
+          <section className="section">
+            <h1 className="section-heading">Dịch vụ giải trí</h1>
 
-          <div className="services-grid">
-            {SERVICES.map(service => (
-              <div key={service.id} className="service-card">
-                <div className="service-card__icon">{service.icon}</div>
-                <h3 className="service-card__title">{service.title}</h3>
-                <p className="service-card__desc">{service.description}</p>
-                <ul className="service-card__features">
-                  {service.features.map((feature, idx) => (
-                    <li key={idx}>{feature}</li>
-                  ))}
-                </ul>
-                <p className="service-card__price">{service.price}</p>
-                <div className="service-card__actions">
-                  <button 
-                    className="service-card__btn service-card__btn--secondary"
-                    onClick={() => {
-                      if (!user && !loading) {
-                        router.push(`/login?redirect=/dich-vu-giai-tri`);
-                        return;
-                      }
-                      handleBook(service.id);
-                    }}
-                  >
-                    Thêm vào giỏ
-                  </button>
-                  <button 
-                    className="service-card__btn service-card__btn--primary"
-                    onClick={() => {
-                      if (!user && !loading) {
-                        router.push(`/login?redirect=/dich-vu-giai-tri`);
-                        return;
-                      }
-                      handleBook(service.id);
-                      router.push("/checkout");
-                    }}
-                  >
-                    Đặt hàng ngay
-                  </button>
+            <div className="branches-grid">
+              <div className="branch-card">
+                <div className="branch-card__icon" style={{ background: "rgba(34, 211, 238, 0.15)" }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="2">
+                    <rect x="2" y="2" width="20" height="20" rx="5" />
+                    <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" />
+                  </svg>
                 </div>
+                <h3 className="branch-card__name">Phòng chiếu VIP</h3>
+                <p className="branch-card__address">
+                  Trải nghiệm xem phim riêng tư với ghế sofa cao cấp, dịch vụ phục vụ tận nơi và không gian sang trọng.
+                </p>
               </div>
-            ))}
-          </div>
 
-          {/* Promo Banner */}
-          <section className="entertainment-promo">
-            <div className="promo-content">
-              <h2>🎉 COMBO GIẢI TRÍ</h2>
-              <p>Mua vé xem phim + sử dụng dịch vụ khác được giảm 20%</p>
-              <Link href="/chuong-trinh-khuyen-mai" className="btn-cta btn-cta--solid">
-                Xem chi tiết
-              </Link>
+              <div className="branch-card">
+                <div className="branch-card__icon" style={{ background: "rgba(244, 114, 182, 0.15)" }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f472b6" strokeWidth="2">
+                    <path d="M18 8h1a4 4 0 010 8h-1" />
+                    <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" />
+                    <line x1="6" y1="1" x2="6" y2="4" />
+                    <line x1="10" y1="1" x2="10" y2="4" />
+                    <line x1="14" y1="1" x2="14" y2="4" />
+                  </svg>
+                </div>
+                <h3 className="branch-card__name">Bắp nước & Snacks</h3>
+                <p className="branch-card__address">
+                  Đa dạng combo bắp nước, snacks, đồ uống với giá ưu đãi khi đặt kèm vé xem phim.
+                </p>
+              </div>
+
+              <div className="branch-card">
+                <div className="branch-card__icon" style={{ background: "rgba(251, 191, 36, 0.15)" }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                </div>
+                <h3 className="branch-card__name">Đặt vé online</h3>
+                <p className="branch-card__address">
+                  Đặt vé dễ dàng qua website hoặc app, chọn ghế yêu thích và thanh toán nhanh chóng.
+                </p>
+              </div>
+
+              <div className="branch-card">
+                <div className="branch-card__icon" style={{ background: "rgba(52, 211, 153, 0.15)" }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2">
+                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 00-3-3.87" />
+                    <path d="M16 3.13a4 4 0 010 7.75" />
+                  </svg>
+                </div>
+                <h3 className="branch-card__name">Thành viên VIP</h3>
+                <p className="branch-card__address">
+                  Tích điểm đổi quà, giảm giá đặc biệt và nhiều ưu đãi dành riêng cho thành viên.
+                </p>
+              </div>
+
+              <div className="branch-card">
+                <div className="branch-card__icon" style={{ background: "rgba(139, 92, 246, 0.15)" }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                </div>
+                <h3 className="branch-card__name">Suất chiếu đặc biệt</h3>
+                <p className="branch-card__address">
+                  Premiere, suất chiếu sớm, phim bom tấn - trải nghiệm đầu tiên cùng LMK Cinema.
+                </p>
+              </div>
+
+              <div className="branch-card">
+                <div className="branch-card__icon" style={{ background: "rgba(251, 113, 133, 0.15)" }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fb7185" strokeWidth="2">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                    <polyline points="22,6 12,13 2,6" />
+                  </svg>
+                </div>
+                <h3 className="branch-card__name">E-Ticket</h3>
+                <p className="branch-card__address">
+                  Vé điện tử gửi qua email, chỉ cần quét QR code tại rạp - nhanh chóng, tiện lợi.
+                </p>
+              </div>
             </div>
           </section>
         </div>

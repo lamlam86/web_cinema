@@ -1,58 +1,43 @@
 "use client";
-import { useState } from "react";
 import Link from "next/link";
 
-const NAV = [
-    { href: "/movie", label: "Đặt vé ngay" },
-    { href: "/popcorn-drink", label: "Đặt bắp nước" },
-    { href: "/phim-dang-chieu", label: "Đang chiếu" },
-    { href: "/phim-sap-chieu", label: "Sắp chiếu" },
-];
+export default function MobileMenu({ user, onClose, onLogout }) {
+  const handleLogout = () => {
+    onLogout();
+    onClose();
+  };
 
-export default function MobileMenu() {
-    const [open, setOpen] = useState(false);
-    return (
-        <>
-            <button className="header__hamburger" aria-label="Mở menu" onClick={() => setOpen(true)}>
-                <span /><span /><span />
+  return (
+    <div className="mnav">
+      <div className="mnav__backdrop" onClick={onClose} />
+      <div className="mnav__sheet">
+        <button className="mnav__close" onClick={onClose}>✕</button>
+        
+        <nav className="mnav__list">
+          <Link href="/movie" onClick={onClose}>Đặt vé xem phim</Link>
+          <Link href="/popcorn-drink" onClick={onClose}>Bắp nước</Link>
+          <Link href="/lich-chieu" onClick={onClose}>Lịch chiếu</Link>
+          <Link href="/he-thong-rap" onClick={onClose}>Hệ thống rạp</Link>
+          <Link href="/chuong-trinh-khuyen-mai" onClick={onClose}>Khuyến mãi</Link>
+          <Link href="/gioi-thieu" onClick={onClose}>Giới thiệu</Link>
+          <Link href="/dich-vu-giai-tri" onClick={onClose}>Dịch vụ giải trí</Link>
+          <Link href="/to-chuc-su-kien" onClick={onClose}>Tổ chức sự kiện</Link>
+        </nav>
+
+        {user ? (
+          <div className="mnav__auth">
+            <Link href="/profile" onClick={onClose}>Tài khoản</Link>
+            <button onClick={handleLogout} style={{ background: "rgba(251, 113, 133, 0.1)", borderColor: "var(--danger)", color: "var(--danger)" }}>
+              Đăng xuất
             </button>
-            {open && (
-                <div className="mnav">
-                    <div className="mnav__sheet">
-                        <button className="mnav__close" aria-label="Đóng" onClick={() => setOpen(false)}>✕</button>
-                        <ul className="mnav__list">
-                            {NAV.map(n => (
-                                <li key={n.href}>
-                                    <Link href={n.href} onClick={() => setOpen(false)}>{n.label}</Link>
-                                </li>
-                            ))}
-                            <li className="mnav__auth">
-                                <Link href="/login" onClick={() => setOpen(false)}>Login</Link>
-                                <Link href="/signup" onClick={() => setOpen(false)}>Register</Link>
-                            </li>
-                        </ul>
-                    </div>
-                    <div className="mnav__backdrop" onClick={() => setOpen(false)} />
-                </div>
-            )}
-        </>
-    );
+          </div>
+        ) : (
+          <div className="mnav__auth">
+            <Link href="/login" onClick={onClose}>Đăng nhập</Link>
+            <Link href="/signup" onClick={onClose}>Đăng ký</Link>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

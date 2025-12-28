@@ -1,73 +1,90 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET - Lấy danh sách ghế và trạng thái đã đặt cho 1 suất chiếu
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
-    const showtimeId = Number(id);
 
-    if (isNaN(showtimeId)) {
-      return NextResponse.json({ error: "ID không hợp lệ" }, { status: 400 });
-    }
-
-    // Lấy thông tin suất chiếu
     const showtime = await prisma.showtimes.findUnique({
-      where: { id: showtimeId },
+      where: { id: BigInt(id) },
       include: {
         screen: {
           include: {
-            seats: {
-              orderBy: [{ seat_row: "asc" }, { seat_number: "asc" }],
-            },
+            seats: true,
+            branch: true,
           },
         },
+        movie: true,
       },
     });
 
     if (!showtime) {
-      return NextResponse.json({ error: "Không tìm thấy suất chiếu" }, { status: 404 });
+      return NextResponse.json({ error: "Suất chiếu không tồn tại" }, { status: 404 });
     }
 
-    // Lấy danh sách ghế đã đặt cho suất chiếu này
-    const bookedSeats = await prisma.booking_items.findMany({
+    // Get booked seats
+    const bookedItems = await prisma.booking_items.findMany({
       where: {
         booking: {
-          showtime_id: showtimeId,
+          showtime_id: BigInt(id),
           status: { in: ["reserved", "confirmed"] },
         },
       },
       select: { seat_id: true },
     });
 
-    const bookedSeatIds = new Set(bookedSeats.map((b) => b.seat_id));
+    const bookedSeatIds = new Set(bookedItems.map((item) => item.seat_id));
 
-    // Map ghế với trạng thái
-    const seats = showtime.screen.seats.map((seat) => ({
-      id: seat.id,
-      seat_code: seat.seat_code,
-      seat_row: seat.seat_row,
-      seat_number: seat.seat_number,
-      seat_type: seat.seat_type,
-      status: bookedSeatIds.has(seat.id) ? "booked" : "available",
-    }));
+    // Group seats by row
+    const seatsByRow = {};
+    showtime.screen.seats.forEach((seat) => {
+      if (!seatsByRow[seat.seat_row]) {
+        seatsByRow[seat.seat_row] = [];
+      }
+      seatsByRow[seat.seat_row].push({
+        id: seat.id,
+        code: seat.seat_code,
+        row: seat.seat_row,
+        number: seat.seat_number,
+        type: seat.seat_type,
+        isBooked: bookedSeatIds.has(seat.id),
+        price: Number(showtime.base_price) * (seat.seat_type === "vip" ? 1.3 : seat.seat_type === "couple" ? 2 : 1),
+      });
+    });
 
-    // Group by row
-    const seatsByRow = seats.reduce((acc, seat) => {
-      if (!acc[seat.seat_row]) acc[seat.seat_row] = [];
-      acc[seat.seat_row].push(seat);
-      return acc;
-    }, {});
+    // Sort seats by number within each row
+    Object.keys(seatsByRow).forEach((row) => {
+      seatsByRow[row].sort((a, b) => a.number - b.number);
+    });
 
     return NextResponse.json({
-      screen: {
-        id: showtime.screen.id,
-        name: showtime.screen.name,
-        seat_rows: showtime.screen.seat_rows,
-        seat_cols: showtime.screen.seat_cols,
+      showtime: {
+        id: Number(showtime.id),
+        start_time: showtime.start_time,
+        end_time: showtime.end_time,
+        base_price: Number(showtime.base_price),
+        movie: {
+          id: Number(showtime.movie.id),
+          title: showtime.movie.title,
+          poster_url: showtime.movie.poster_url,
+          duration_minutes: showtime.movie.duration_minutes,
+        },
+        screen: {
+          id: showtime.screen.id,
+          name: showtime.screen.name,
+          type: showtime.screen.type,
+          rows: showtime.screen.seat_rows,
+          cols: showtime.screen.seat_cols,
+        },
+        branch: {
+          id: showtime.screen.branch.id,
+          name: showtime.screen.branch.name,
+          address: showtime.screen.branch.address,
+        },
       },
       seats: seatsByRow,
-      base_price: Number(showtime.base_price),
+      bookedCount: bookedSeatIds.size,
+      totalSeats: showtime.screen.seats.length,
     });
   } catch (error) {
     console.error("GET /api/showtimes/[id]/seats error:", error);

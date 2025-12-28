@@ -1,143 +1,91 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import "intl-tel-input/build/css/intlTelInput.css";
 
 export default function SignupPage() {
   const router = useRouter();
-  const phoneRef = useRef(null);
-  const itiRef = useRef(null);
-
-  const [fullname, setFullname] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [policyChecked, setPolicyChecked] = useState(false);
-
+  const [formData, setFormData] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirmPassword: "",
+  });
   const [errors, setErrors] = useState({});
   const [generalError, setGeneralError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  // Check if user is already logged in - redirect immediately
-  useEffect(() => {
-    async function checkAuth() {
-      try {
-        const res = await fetch("/api/auth/me");
-        const data = await res.json();
-        
-        if (data.success && data.user) {
-          // User is already logged in, redirect to home
-          router.replace("/");
-        }
-      } catch (e) {
-        // Not logged in, continue showing signup form
-      }
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
-    checkAuth();
-  }, [router]);
+    if (generalError) {
+      setGeneralError("");
+    }
+  };
 
-  useEffect(() => {
-    (async () => {
-      const intlTelInput = (await import("intl-tel-input")).default;
-      if (phoneRef.current) {
-        itiRef.current = intlTelInput(phoneRef.current, {
-          initialCountry: "vn",
-          separateDialCode: true,
-          preferredCountries: ["vn", "us", "gb", "au", "de", "fr", "jp", "kr"],
-          nationalMode: false,
-          utilsScript:
-            "https://cdn.jsdelivr.net/npm/intl-tel-input@17/build/js/utils.js",
-        });
-      }
-    })();
-    return () => {
-      if (itiRef.current) {
-        itiRef.current.destroy();
-      }
-    };
-  }, []);
-
-  const validateForm = () => {
+  const validate = () => {
     const newErrors = {};
 
-    const fullnameRegex = /^[\p{L}\s]{2,}$/u;
-    if (!fullname.trim()) {
-      newErrors.fullname = "Vui lòng nhập họ và tên";
-    } else if (!fullnameRegex.test(fullname.trim())) {
-      newErrors.fullname = "Họ và tên phải hợp lệ, không chứa số.";
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = "Vui lòng nhập họ tên";
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email.trim()) {
+    if (!formData.email.trim()) {
       newErrors.email = "Vui lòng nhập email";
-    } else if (!emailRegex.test(email.trim())) {
-      newErrors.email = "Email không hợp lệ.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Email không hợp lệ";
     }
 
-    if (phone.trim() && itiRef.current && !itiRef.current.isValidNumber()) {
-      newErrors.phone = "Số điện thoại không hợp lệ cho quốc gia đã chọn.";
-    }
-
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!password) {
+    if (!formData.password) {
       newErrors.password = "Vui lòng nhập mật khẩu";
-    } else if (!passwordRegex.test(password)) {
-      newErrors.password = "Mật khẩu ≥8 ký tự, gồm hoa, thường, số, ký tự đặc biệt.";
+    } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(formData.password)) {
+      newErrors.password = "Mật khẩu phải có ít nhất 8 ký tự, chữ hoa, chữ thường, số và ký tự đặc biệt";
     }
 
-    if (!confirmPassword) {
-      newErrors.confirmPassword = "Vui lòng xác nhận mật khẩu";
-    } else if (password !== confirmPassword) {
-      newErrors.confirmPassword = "Mật khẩu xác nhận không khớp.";
-    }
-
-    if (!policyChecked) {
-      newErrors.policy = "Bạn phải đồng ý với chính sách.";
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Mật khẩu xác nhận không khớp";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const onSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validate()) return;
 
-    if (!validateForm()) return;
-
-    setIsLoading(true);
+    setLoading(true);
     setGeneralError("");
 
     try {
-      const phoneE164 = itiRef.current?.getNumber() || phone;
-
-      const response = await fetch("/api/auth/register", {
+      const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fullName: fullname.trim(),
-          email: email.trim(),
-          phone: phoneE164,
-          password,
+          fullName: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
         }),
       });
 
-      const data = await response.json();
+      const data = await res.json();
 
       if (data.success) {
-        router.push("/");
+        router.push("/login?registered=true");
       } else {
-        setGeneralError(data.message);
+        setGeneralError(data.message || "Đăng ký thất bại");
       }
-    } catch {
-      setGeneralError("Không thể kết nối đến server. Vui lòng thử lại.");
+    } catch (error) {
+      setGeneralError("Đã có lỗi xảy ra, vui lòng thử lại");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -146,128 +94,82 @@ export default function SignupPage() {
       <Header />
       <main className="login-container">
         <div className="login-box">
-          <h2>Tạo tài khoản mới</h2>
+          <h2>Đăng ký tài khoản</h2>
 
-          {generalError && (
-            <div className="general-error">{generalError}</div>
-          )}
+          {generalError && <div className="general-error">{generalError}</div>}
 
-          <form id="signupForm" noValidate autoComplete="off" onSubmit={onSubmit}>
+          <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label htmlFor="fullname">Họ và tên</label>
+              <label htmlFor="fullName">Họ và tên *</label>
               <input
-                id="fullname"
+                type="text"
+                id="fullName"
+                name="fullName"
+                value={formData.fullName}
+                onChange={handleChange}
                 placeholder="Nhập họ và tên"
-                value={fullname}
-                onChange={(e) => setFullname(e.target.value)}
-                disabled={isLoading}
-                className={errors.fullname ? "error" : ""}
               />
-              {errors.fullname && <div className="error-message">{errors.fullname}</div>}
+              {errors.fullName && <div className="error-message">{errors.fullName}</div>}
             </div>
 
             <div className="form-group">
-              <label htmlFor="email">Địa chỉ Email</label>
+              <label htmlFor="email">Email *</label>
               <input
                 type="email"
                 id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
                 placeholder="Nhập email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
-                className={errors.email ? "error" : ""}
               />
               {errors.email && <div className="error-message">{errors.email}</div>}
             </div>
 
             <div className="form-group">
               <label htmlFor="phone">Số điện thoại</label>
-              <div className="phone-group">
-                <input
-                  ref={phoneRef}
-                  id="phone"
-                  type="tel"
-                  placeholder="Nhập số điện thoại"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  disabled={isLoading}
-                  className={errors.phone ? "error" : ""}
-                />
-              </div>
-              {errors.phone && <div className="error-message">{errors.phone}</div>}
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                placeholder="Nhập số điện thoại (tùy chọn)"
+              />
             </div>
 
             <div className="form-group">
-              <label htmlFor="password">Mật khẩu</label>
-              <div className="password-wrapper">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  id="password"
-                  placeholder="Nhập mật khẩu"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isLoading}
-                  className={errors.password ? "error" : ""}
-                />
-                <button
-                  type="button"
-                  className="toggle-btn"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? "🙈" : "👁"}
-                </button>
-              </div>
+              <label htmlFor="password">Mật khẩu *</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Nhập mật khẩu"
+              />
               {errors.password && <div className="error-message">{errors.password}</div>}
             </div>
 
             <div className="form-group">
-              <label htmlFor="confirm-password">Xác nhận mật khẩu</label>
-              <div className="password-wrapper">
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  id="confirm-password"
-                  placeholder="Nhập lại mật khẩu"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  disabled={isLoading}
-                  className={errors.confirmPassword ? "error" : ""}
-                />
-                <button
-                  type="button"
-                  className="toggle-btn"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  {showConfirmPassword ? "🙈" : "👁"}
-                </button>
-              </div>
+              <label htmlFor="confirmPassword">Xác nhận mật khẩu *</label>
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="Nhập lại mật khẩu"
+              />
               {errors.confirmPassword && <div className="error-message">{errors.confirmPassword}</div>}
             </div>
 
-            <div className="form-group" style={{ marginTop: 10 }}>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  id="policy"
-                  checked={policyChecked}
-                  onChange={(e) => setPolicyChecked(e.target.checked)}
-                  disabled={isLoading}
-                  className={errors.policy ? "error" : ""}
-                />
-                <span>
-                  Tôi đồng ý với <a href="/chinhsach" target="_blank">Chính sách bảo mật</a> và{" "}
-                  <a href="/dieukhoan" target="_blank">Điều khoản sử dụng</a>.
-                </span>
-              </label>
-              {errors.policy && <div className="error-message">{errors.policy}</div>}
-            </div>
-
-            <button type="submit" className="btn-login" disabled={isLoading}>
-              {isLoading ? "Đang đăng ký..." : "Đăng ký"}
+            <button type="submit" className="btn-login" disabled={loading}>
+              {loading ? "Đang xử lý..." : "Đăng ký"}
             </button>
           </form>
 
           <p className="register-text">
-            Đã có tài khoản? <a href="/login">Đăng nhập tại đây</a>
+            Đã có tài khoản? <Link href="/login">Đăng nhập</Link>
           </p>
         </div>
       </main>
